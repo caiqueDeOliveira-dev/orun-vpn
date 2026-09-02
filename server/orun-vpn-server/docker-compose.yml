@@ -1,0 +1,54 @@
+# Orun VPN Server
+# wg-easy (WireGuard + admin API) + Unbound com blocklist (estilo wirebuddy)
+#
+# Deploy: copiar .env.example -> .env, preencher, e rodar:
+#   docker compose up -d
+#
+# Migração futura pro HomeLab: mesmo compose, só troca o host/volume.
+
+services:
+  wg-easy:
+    image: ghcr.io/wg-easy/wg-easy:14
+    container_name: orun-vpn-wg-easy
+    environment:
+      - WG_HOST=${WG_HOST}
+      - PASSWORD_HASH=${WG_EASY_PASSWORD_HASH}
+      - PORT=51821
+      - WG_PORT=51820
+      # DNS aponta para o Unbound do compose, não 1.1.1.1/8.8.8.8 direto —
+      # é aqui que o filtro de blocklist entra no caminho de cada peer.
+      - WG_DEFAULT_DNS=10.8.0.1
+    volumes:
+      - wg_easy_data:/etc/wireguard
+    ports:
+      - "51820:51820/udp"
+      - "127.0.0.1:51821:51821/tcp" # API só via localhost; expor por VPN/SSH tunnel, nunca direto
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1
+    networks:
+      - default # precisa estar na mesma sub-rede 10.8.0.0/24 do wg-easy para o Unbound responder em 10.8.0.1
+    restart: unless-stopped
+
+  unbound:
+    image: mvance/unbound:latest
+    container_name: orun-vpn-unbound
+    volumes:
+      - ./unbound/unbound.conf:/opt/unbound/etc/unbound/unbound.conf:ro
+      - ./unbound/hagezi-pro.rpz:/opt/unbound/etc/unbound/hagezi-pro.rpz:ro
+    networks:
+      default:
+        ipv4_address: 10.8.0.1 # precisa estar na mesma sub-rede do WireGuard (padrão wg-easy: 10.8.0.0/24)
+    restart: unless-stopped
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 10.8.0.0/24
+
+volumes:
+  wg_easy_data:

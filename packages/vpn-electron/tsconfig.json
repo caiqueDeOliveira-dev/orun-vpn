@@ -1,4 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@orun/vpn-core": ["../../packages/vpn-core/src/index.ts"]
+    }
+  },
   "include": ["src/**/*.ts"]
 }

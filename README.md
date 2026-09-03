@@ -29,15 +29,24 @@ server/
   em Nuxt/Nitro — prefixo real é `/api/client`, login exige `username` +
   `password` em `/api/auth/password`, e `clientId` é numérico. Corrigido
   no `WgEasyClient` depois de baixar e ler `wg-easy/wg-easy` diretamente.
-  O que ainda falta: testar contra uma instância rodando de verdade (Docker
-  não disponível neste ambiente) — 2FA/TOTP do wg-easy também não tem
-  suporte no client ainda, só lança erro claro se aparecer.
-- **DNS filtering: blocklist HaGeZi via RPZ, confirmado no repositório real**
-  (`rpz/pro.txt`, não existe pasta `unbound/` como eu tinha assumido antes).
-  Baixei e validei o arquivo de verdade (452k+ entradas, formato de zona
-  válido). O que não dá pra confirmar sem Docker: se a imagem
-  `mvance/unbound` foi compilada com `--enable-rpz` habilitado — testar com
-  `unbound-checkconf` antes do primeiro deploy real.
+  O stack já roda de verdade (veja abaixo) — o servidor sobe com
+  `docker compose up -d`. Falta ainda: 2FA/TOTP do wg-easy não tem suporte
+  no client, só lança erro claro se aparecer; e o client real
+  (`WgEasyClient`) ainda não foi testado contra esta instância (só contra
+  `fetch` mockado).
+- **DNS filtering: blocklist HaGeZi via RPZ — VALIDADO com Docker real.**
+  A imagem `mvance/unbound` é compilada SEM `--enable-rpz` e morre
+  silenciosamente (exit 1) com um bloco `rpz:` na config. Solução: um
+  `Dockerfile` próprio (em `server/orun-vpn-server/unbound/`) que compila
+  o Unbound 1.22.0 com `--enable-rpz`. Confirmado em runtime: `unbound -V`
+  mostra `--enable-rpz` + módulo `respip`, o serviço carrega a HaGeZi
+  completa (450k entradas) sem crash, bloqueia domínios da blocklist com
+  `NXDOMAIN` e resolve domínios normais via forward DNS-over-TLS pro
+  1.1.1.1 (sem falso positivo). As duas pedras de tropeço reais ao validar:
+  (1) o bloco `rpz:` exige `module-config: "respip validator iterator"` no
+  `server:` (sem isso o RPZ não ativa); (2) o arquivo de zona precisa de
+  line endings LF (um artifact com CRLF/BOM gerava erro de parse "could not
+  parse the RR's class").
 - **Kill switch: implementado nos 3 SOs, cada um com o mecanismo certo pra
   plataforma** (não é o mesmo código copiado 3x):
   - **Linux**: nftables via PostUp/PreDown embutido no config do wg-quick.

@@ -17,7 +17,9 @@ services:
       - WG_PORT=51820
       # DNS aponta para o Unbound do compose, não 1.1.1.1/8.8.8.8 direto —
       # é aqui que o filtro de blocklist entra no caminho de cada peer.
-      - WG_DEFAULT_DNS=10.8.0.1
+      # 10.8.0.53 é o IP FIXO do Unbound na rede (NÃO pode ser 10.8.0.1:
+      # esse é o gateway do túnel WireGuard do wg-easy e do Docker).
+      - WG_DEFAULT_DNS=10.8.0.53
     volumes:
       - wg_easy_data:/etc/wireguard
     ports:
@@ -34,14 +36,20 @@ services:
     restart: unless-stopped
 
   unbound:
-    image: mvance/unbound:latest
+    build:
+      context: ./unbound
+      args:
+        UNBOUND_VERSION: 1.22.0
+    image: orun-vpn-unbound:1.22.0
     container_name: orun-vpn-unbound
     volumes:
       - ./unbound/unbound.conf:/opt/unbound/etc/unbound/unbound.conf:ro
-      - ./unbound/hagezi-pro.rpz:/opt/unbound/etc/unbound/hagezi-pro.rpz:ro
+      # hagezi-pro.rpz montado read-write: o Unbound compila a zone RPZ e pode
+      # gravar um sidecar no mesmo dir; ro causaria falha silenciosa.
+      - ./unbound/hagezi-pro.rpz:/opt/unbound/etc/unbound/hagezi-pro.rpz
     networks:
       default:
-        ipv4_address: 10.8.0.1 # precisa estar na mesma sub-rede do WireGuard (padrão wg-easy: 10.8.0.0/24)
+        ipv4_address: 10.8.0.53 # IP fixo do DNS filtrado na sub-rede do túnel (10.8.0.1 é o gateway do WireGuard/Docker)
     restart: unless-stopped
 
 networks:

@@ -24,16 +24,35 @@ server/
 
 ## Gaps honestos (não finalizado)
 
-- **Endpoints da API wg-easy: verificados contra o código-fonte real** (não
-  mais inferidos de wrapper de terceiro). O `wg-easy` atual é uma reescrita
-  em Nuxt/Nitro — prefixo real é `/api/client`, login exige `username` +
-  `password` em `/api/auth/password`, e `clientId` é numérico. Corrigido
-  no `WgEasyClient` depois de baixar e ler `wg-easy/wg-easy` diretamente.
-  O stack já roda de verdade (veja abaixo) — o servidor sobe com
-  `docker compose up -d`. Falta ainda: 2FA/TOTP do wg-easy não tem suporte
-  no client, só lança erro claro se aparecer; e o client real
-  (`WgEasyClient`) ainda não foi testado contra esta instância (só contra
-  `fetch` mockado).
+- **API do wg-easy: `WgEasyClient` VALIDADO de ponta a ponta contra a
+  instância real rodando** (`ghcr.io/wg-easy/wg-easy:14`, container
+  `orun-vpn-wg-easy`). O client original tinha sido escrito contra um
+  contrato imaginado/mais novo — a versão real v14 é DIFERENTE e foi
+  corrigida no `WgEasyClient` depois de ler o código-fonte DENTRO do
+  container (`/app/lib/Server.js` + `WireGuard.js`) e validar ao vivo:
+  - **Login**: `POST /api/session` com body `{ password }` (v14 NÃO usa
+    `username`; o antigo `/api/auth/password` nesse formato NÃO existe).
+  - **Prefixos**: `/api/wireguard/client` (não `/api/client`).
+  - **Campos do peer**: `id` (string), `address` (campo ÚNICO, não
+    `ipv4Address`+`ipv6Address`), `publicKey`, `enabled`, `createdAt`,
+    `latestHandshakeAt`, `transferRx`, `transferTx`.
+  - **createPeer** retorna `{ success: true }` (não devolve o id) — o client
+    busca o peer recem-criado pelo nome.
+  - **2FA/TOTP não existe na v14** — o `WgEasyClient` original previa
+    `TOTP_REQUIRED` (de uma versão mais nova); na v14 o contrato de erro de
+    login é HTTP 401 do `createError`. Não há TOTP a suportar nesta versão.
+  - **Auth robusta**: além do cookie de sessão (`connect.sid`, secret random
+    a cada boot → não sobrevive a restart), o client envia a senha crua no
+    header `Authorization`, que o middleware do v14 aceita diretamente
+    (`isPasswordValid(req.headers['authorization'])`) — estável entre
+    restarts.
+  - **Testado ao vivo dentro do container** (o host não consegue falar com a
+    API: `docker ps` mapeia `127.0.0.1:51821`, mas o host recebe "empty
+    reply" do Nitro — a rede interna do container responde normalmente):
+    login → list → create → getConfig (tem `[Interface]`+`[Peer]`) → QR SVG
+    → disable/enable → delete, tudo HTTP 200 e peer removido após o teste.
+    Nenhum peer de smoke deixado no servidor (`wg0.conf` sem `[Peer]` após a
+    limpeza).
 - **DNS filtering: blocklist HaGeZi via RPZ — VALIDADO com Docker real.**
   A imagem `mvance/unbound` é compilada SEM `--enable-rpz` e morre
   silenciosamente (exit 1) com um bloco `rpz:` na config. Solução: um
@@ -91,12 +110,15 @@ server/
 
 ## Testes
 
-20 testes rodando de verdade (`vitest run`, conferido passando antes desta
+40 testes rodando de verdade (`vitest run`, conferido passando antes desta
 entrega, não só escrito):
 
-- `vpn-core` (15): schema Zod, fluxo completo de `BaseVpnBackend` com backend
-  fake, e `WgEasyClient` com `fetch` mockado (login, TOTP, listPeers,
-  mapeamento `ipv4Address` → `address`, erro se chamado sem login).
+- `vpn-core` (19): schema Zod, fluxo completo de `BaseVpnBackend` com backend
+  fake, e `WgEasyClient` com `fetch` mockado cobrindo o CONTRATO REAL da v14
+  (login `POST /api/session` password-only, prefixo
+  `/api/wireguard/client`, `address` campo único, createPeer busca pelo
+  nome, enable/disable, getConfig, erro se chamado sem login) — e ainda o
+  client compilado testado ao vivo contra a instância real (ver acima).
 - `vpn-electron` (21): função pura `buildWireGuardConfig` (endereço real,
   `[Peer]` completo, kill switch nftables/pf só onde faz sentido, nenhum
   PostUp/PreDown no Windows) + `windows-killswitch` (script gera

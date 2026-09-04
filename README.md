@@ -16,11 +16,18 @@ remoto seguro ao Desktop / futuro HomeLab, sem depender de provedor terceiro.
 
 ```
 packages/
-  vpn-core/          # Zod schema, interfaces *Like, BaseVpnBackend, cliente wg-easy
+  vpn-core/          # Zod schema, interfaces *Like, BaseVpnBackend, cliente wg-easy (+ examples/provision-peer.cjs)
   vpn-electron/       # Implementação Desktop (wg-quick / wireguard.exe)
 server/
   orun-vpn-server/    # docker-compose: wg-easy + Unbound com blocklist
+docs/                # arquitetura, instalação e provisioning
 ```
+
+## Documentação
+
+- [`docs/architecture.md`](./docs/architecture.md) — visão geral, contratos e tipos.
+- [`docs/installation.md`](./docs/installation.md) — deploy do servidor + uso do cliente.
+- [`docs/provisioning.md`](./docs/provisioning.md) — como adicionar dispositivos (painel web ou via `@orun/vpn-core`, validado ao vivo).
 
 ## Gaps honestos (não finalizado)
 
@@ -153,6 +160,10 @@ entrega, não só escrito):
 
 ## Deploy do servidor (VPS ou HomeLab, mesmo compose)
 
+Passo a passo completo em [`docs/installation.md`](./docs/installation.md)
+(inclui a armadilha do `$$` no hash bcrypt do `.env` e o setup do DNS filter).
+Resumo:
+
 ```bash
 cd server/orun-vpn-server
 cp .env.example .env   # preencher WG_HOST e WG_EASY_PASSWORD_HASH
@@ -171,6 +182,8 @@ await backend.connect(profile, peer, serverConfig);
 ```
 
 ## Uso no lado de administração (provisionar peers no servidor)
+
+Fluxo completo (painel web ou script) em [`docs/provisioning.md`](./docs/provisioning.md).
 
 ```ts
 import { WgEasyClient } from '@orun/vpn-core';

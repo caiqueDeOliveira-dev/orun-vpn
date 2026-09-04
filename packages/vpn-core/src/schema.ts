@@ -23,6 +23,9 @@ export const VpnServerConfigSchema = z.object({
   /** Chave pública WireGuard do servidor — necessária no [Peer] da config do cliente */
   wgPublicKey: z.string().min(1),
   useTls: z.boolean().default(true),
+  /** IP do DNS filtrado entregue a cada peer no [Interface]. NÃO é o gateway
+   *  (10.8.0.1 = Docker); é o Unbound fixo da sub-rede do túnel (10.8.0.53). */
+  dnsServer: z.string().default('10.8.0.53'),
   /** DNS filtering integrado (estilo wirebuddy) */
   dnsFilter: z
     .object({
@@ -45,6 +48,9 @@ export const VpnPeerSchema = z.object({
   name: z.string().min(1), // ex: "Caique-Desktop", "Caique-iPhone"
   /** Chave pública WireGuard (privada nunca sai do ISecretStore) */
   publicKey: z.string(),
+  /** PresharedKey por cliente (wg-easy gera um por peer). Se presente, é
+   *  emitida no [Peer] da config do cliente — sem ela o handshake falha. */
+  presharedKey: z.string().nullable().default(null),
   address: z.string(), // ex: "10.8.0.2/32"
   enabled: z.boolean().default(true),
   createdAt: z.string().datetime(),

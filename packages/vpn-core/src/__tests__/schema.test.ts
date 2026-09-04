@@ -16,6 +16,7 @@ describe('VpnServerConfigSchema', () => {
     expect(parsed.wgPort).toBe(51820);
     expect(parsed.dnsFilter.enabled).toBe(true);
     expect(parsed.dnsFilter.blocklist).toBe('hagezi-pro');
+    expect(parsed.dnsServer).toBe('10.8.0.53');
   });
 
   it('rejeita config sem wgPublicKey (regressão do bug do [Peer] vazio)', () => {
@@ -42,5 +43,6 @@ describe('VpnPeerSchema', () => {
     expect(parsed.serverId).toBe('11111111-1111-1111-1111-111111111111');
     expect(parsed.enabled).toBe(true); // default
     expect(parsed.latestHandshakeAt).toBeNull(); // default
+    expect(parsed.presharedKey).toBeNull(); // default (wg-easy gera por peer no provisioning)
   });
 });

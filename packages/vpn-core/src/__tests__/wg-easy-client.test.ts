@@ -82,6 +82,7 @@ describe('WgEasyClient (API real do wg-easy v14)', () => {
         serverId: 'server-1',
         name: 'Caique-Desktop',
         publicKey: 'server-side-pub==',
+        presharedKey: null,
         address: '10.8.0.7',
         enabled: true,
         createdAt: '2026-01-01T00:00:00.000Z',

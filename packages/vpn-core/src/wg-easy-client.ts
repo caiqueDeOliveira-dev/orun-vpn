@@ -165,6 +165,7 @@ export class WgEasyClient implements IVpnServerClientLike {
       serverId,
       name: raw.name,
       publicKey: raw.publicKey,
+      presharedKey: null, // PSK só vem no .conf do getPeerConfig (provisioning); lista não expõe
       address: raw.address,
       enabled: raw.enabled,
       createdAt: raw.createdAt,

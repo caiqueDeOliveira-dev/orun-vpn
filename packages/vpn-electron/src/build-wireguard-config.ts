@@ -28,7 +28,7 @@ export function buildWireGuardConfig(
     '[Interface]',
     `PrivateKey = ${privateKey}`,
     `Address = ${peer.address}`,
-    server.dnsFilter.enabled ? `DNS = 10.8.0.1` : '',
+    server.dnsFilter.enabled ? `DNS = ${server.dnsServer}` : '',
   ];
 
   if (killSwitchEnabled && platform === 'linux') {
@@ -61,6 +61,11 @@ export function buildWireGuardConfig(
     '',
     '[Peer]',
     `PublicKey = ${server.wgPublicKey}`,
+  );
+  if (peer.presharedKey) {
+    lines.push(`PresharedKey = ${peer.presharedKey}`);
+  }
+  lines.push(
     `Endpoint = ${server.host}:${server.wgPort}`,
     `AllowedIPs = 0.0.0.0/0, ::/0`,
     `PersistentKeepalive = 25`,

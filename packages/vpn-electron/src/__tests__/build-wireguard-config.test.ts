@@ -7,6 +7,7 @@ const peer: VpnPeer = {
   serverId: '11111111-1111-1111-1111-111111111111',
   name: 'Caique-Desktop',
   publicKey: 'peer-pub==',
+  presharedKey: null,
   address: '10.8.0.7/32',
   enabled: true,
   createdAt: new Date().toISOString(),
@@ -23,6 +24,7 @@ const server: VpnServerConfig = {
   wgPort: 51820,
   wgPublicKey: 'server-pub==',
   useTls: true,
+  dnsServer: '10.8.0.53',
   dnsFilter: { enabled: true, upstream: 'unbound-dot', blocklist: 'hagezi-pro' },
   createdAt: new Date().toISOString(),
 };
@@ -47,6 +49,23 @@ describe('buildWireGuardConfig', () => {
     };
     const config = buildWireGuardConfig('privkey', peer, serverSemDns, false, 'darwin');
     expect(config).not.toContain('DNS =');
+  });
+
+  it('usa o dnsServer do servidor (10.8.0.53), não o gateway 10.8.0.1 (bug real do tunnel)', () => {
+    const config = buildWireGuardConfig('privkey', peer, server, false, 'darwin');
+    expect(config).toContain('DNS = 10.8.0.53');
+    expect(config).not.toContain('10.8.0.1');
+  });
+
+  it('emite PresharedKey no [Peer] quando o peer tem um (wg-easy gera um por cliente)', () => {
+    const peerComPsk: VpnPeer = { ...peer, presharedKey: 'psk-abc==' };
+    const config = buildWireGuardConfig('privkey', peerComPsk, server, false, 'darwin');
+    expect(config).toContain('PresharedKey = psk-abc==');
+  });
+
+  it('omite PresharedKey quando o peer não tem', () => {
+    const config = buildWireGuardConfig('privkey', peer, server, false, 'darwin');
+    expect(config).not.toContain('PresharedKey');
   });
 
   it('adiciona regras nftables de kill switch só no Linux', () => {

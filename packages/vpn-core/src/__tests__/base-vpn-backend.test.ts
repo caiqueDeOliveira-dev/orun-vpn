@@ -45,6 +45,7 @@ const peer: VpnPeer = {
   serverId: '11111111-1111-1111-1111-111111111111',
   name: 'Caique-Desktop',
   publicKey: 'pub==',
+  presharedKey: null,
   address: '10.8.0.2/32',
   enabled: true,
   createdAt: new Date().toISOString(),
@@ -61,6 +62,7 @@ const server: VpnServerConfig = {
   wgPort: 51820,
   wgPublicKey: 'server-pub==',
   useTls: true,
+  dnsServer: '10.8.0.53',
   dnsFilter: { enabled: true, upstream: 'unbound-dot', blocklist: 'hagezi-pro' },
   createdAt: new Date().toISOString(),
 };
